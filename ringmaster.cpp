@@ -34,25 +34,26 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 int main(int argc, char *argv[]) {
-	int socket_fd;
-	//unsigned num_players = argv[2];
+	int socket_fd; // ringmaster socket for listening client
 	int num_players = atoi(argv[2]);
 	int num_hops = atoi(argv[3]);
-	int* player_socketfd = new int[num_players];
-	struct addrinfo host_info;
-  	struct addrinfo *host_info_list;
+	int* player_socketfd = new int[num_players]; // used to store the socket connected with each client
+	struct addrinfo host_info; // hints
+  	struct addrinfo *host_info_list; // address information
+    // store the socket client uses to connect with ringmaster
   	struct sockaddr_storage * player_addr = new struct sockaddr_storage [num_players];
+  	// store the socket client uses to listen
   	struct sockaddr_storage * player_listen = new struct sockaddr_storage [num_players];
   	char buf[256];
+  	//check error status
   	int status;
-  	//master  fd
-  	fd_set master;
-	fd_set read_fds;
+  	fd_set master; //master  fd
+	fd_set read_fds; // temperate read list
   	int fdmax=0; // maximum file descriptor number
 
   	// make a potato for the game
   	potato mypotato = {num_hops,{0},0};
-  	//mypotato.players_ID = new int[num_hops];
+
   	// initialize the host_info with 0
  	memset(&host_info, 0, sizeof(host_info));
 
@@ -62,16 +63,24 @@ int main(int argc, char *argv[]) {
  	host_info.ai_family   = AF_INET;
   	host_info.ai_socktype = SOCK_STREAM;
   	host_info.ai_flags    = AI_PASSIVE; // set for bind
-	if((status = getaddrinfo(NULL, argv[1], & host_info, &host_info_list)) != 0){
-		cerr << "getaddrinfo error:" << gai_strerror(status);
+
+  	// now display game information
+	cout << "Potato Ringmaster"<<endl;
+	cout <<"Players = " << num_players << endl;
+	cout <<"Hops = " << num_hops << endl;
+
+	//get the ringmaster's address information
+  	if((status = getaddrinfo(NULL, argv[1], & host_info, &host_info_list)) != 0){
+		cerr << "getaddrinfo for listen error:" << gai_strerror(status);
 		return EXIT_FAILURE;
 	}
+
+  	// set up a socket for listening
   	socket_fd = socket(host_info_list->ai_family, 
 		     host_info_list->ai_socktype, 
 		     host_info_list->ai_protocol);
   	if (socket_fd == -1) {
     	cerr << "Error: cannot create socket" << endl;
-//    	cerr << "  (" << hostname << "," << port << ")" << endl;
     	return EXIT_FAILURE;
   	}
 
@@ -80,9 +89,9 @@ int main(int argc, char *argv[]) {
   	status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
   	if (status == -1) {
    	 cerr << "Error: cannot bind socket" << endl;
-   //	 cerr << "  (" << hostname << "," << port << ")" << endl;
-    	return -1;
-  	} //if
+   	 return EXIT_FAILURE;
+  	}
+  	
  	 status = listen(socket_fd, 100);
   	if (status == -1) {
     	cerr << "Error: cannot listen on socket" << endl; 

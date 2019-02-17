@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
         fdmax = neigh_fd[0];
     FD_SET(neigh_fd[1], &master);
     if(neigh_fd[1] > fdmax)
-        fdmax = neigh_fd[0];
+        fdmax = neigh_fd[1];
 
       status = send(socket_fd, "ready to listen", 20, 0);
       if (status == -1) {

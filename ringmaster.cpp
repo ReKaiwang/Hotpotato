@@ -203,9 +203,9 @@ int main(int argc, char *argv[]) {
     }
 	srand( (unsigned int) time(NULL));
     int first_player = rand()% num_players;
-	cout << "Ready to start the game, sending potato to player "<<(first_player+1)<<endl;
+	cout << "Ready to start the game, sending potato to player "<<(first_player)<<endl;
     if((status = send(player_socketfd[first_player],& mypotato, sizeof(potato),0))==-1){
-    	cerr<<"fail to send potato to "<<(first_player+1)<<endl;
+    	cerr<<"fail to send potato to "<<(first_player)<<endl;
 		return EXIT_FAILURE;
     }
     cout << "wait for potato"<<endl;

@@ -7,6 +7,7 @@
 #include <string>
 #include <iostream>
 #include <arpa/inet.h>
+#include <string.h>
 #include "potato.h"
 using namespace std;
 //struct _potato
@@ -50,9 +51,9 @@ int main(int argc, char *argv[]) {
 	struct addrinfo host_info; // hints
   	struct addrinfo *host_info_list; // address information
     // store the socket client uses to connect with ringmaster
-  	struct sockaddr_storage * player_addr = new struct sockaddr_storage [num_players];
+  	struct sockaddr_in * player_addr = new struct sockaddr_in [num_players];
   	// store the socket client uses to listen
-  	struct sockaddr_storage * player_listen = new struct sockaddr_storage [num_players];
+  	struct sockaddr_in * player_listen = new struct sockaddr_in [num_players];
   	char buf[256];
   	int status; //check error status
   	fd_set master; //master  fd
@@ -60,9 +61,14 @@ int main(int argc, char *argv[]) {
   	int fdmax=0; // maximum file descriptor number
     const char * end = "endgame";
 
+    struct sockaddr *listen_addr = new struct sockaddr;
   	// make a potato for the game
   	potato mypotato = {num_hops,{0},0};
 
+    if (argc != 4) {
+        printf("Syntax: client\n");
+        return EXIT_FAILURE;
+    }
   	// initialize the host_info with 0
  	memset(&host_info, 0, sizeof(host_info));
 
@@ -93,8 +99,8 @@ int main(int argc, char *argv[]) {
     	return EXIT_FAILURE;
   	}
 
-  	//int yes = 1;
-  	//status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+  	int yes = 1;
+  	status = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, 1000*sizeof(int));
   	status = bind(socket_fd, host_info_list->ai_addr, host_info_list->ai_addrlen);
   	if (status == -1) {
    	 cerr << "Error: cannot bind socket" << endl;
@@ -105,7 +111,18 @@ int main(int argc, char *argv[]) {
   	if (status == -1) {
     	cerr << "Error: cannot listen on socket" << endl;
     	return EXIT_FAILURE;
-  	} //if
+  	}
+    status  = getsockname(socket_fd,listen_addr,& host_info_list->ai_addrlen);
+    if(status == -1){
+        cerr << "fail to get listen socket name" << endl;
+        return EXIT_FAILURE;
+    }
+    struct sockaddr_in sa = *(struct sockaddr_in *) listen_addr;
+    char ip4[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
+    cout <<"original" <<ip4 << " " << htons(sa.sin_port) << endl;
+
+    //if
 	//FD_SET(socket_fd, &master);
 	//fdmax = socket_fd;
   	//cout << "Waiting for connection"<<endl;
@@ -122,18 +139,23 @@ int main(int argc, char *argv[]) {
 			fdmax = new_fd;
 		}
 		player_socketfd[i] = new_fd;
+		// recv the listen port information
         status = recv(new_fd, player_listen+i, sizeof(* player_listen), 0);
-        if(status == -1){
+        if(status != sizeof(* player_listen)){
+            if(status < 0)
             cerr << "fail to receive message"<<endl;
+            else{
+                cout << "want address bytes with" << sizeof(* player_listen) << "but "<<status<<endl;
+            }
             return EXIT_FAILURE;
         }
-
-		cout << "Player " << i << " is ready to play" << endl;
+        (player_listen+i)->sin_addr = (player_addr+i)->sin_addr;
+        cout << "Player " << i << " is ready to play" << endl;
   	}
 
   	// server sends neighbor info to each player
 	for(int i = 0; i < num_players; i++){
-		struct sockaddr_storage *neigh_addr = new sockaddr_storage[3];
+		struct sockaddr_in *neigh_addr = new sockaddr_in[3];
 		int player_num[2] = {i, num_players};
 		if(i == 0) {
 			neigh_addr[0] = player_listen[num_players-1];
@@ -147,12 +169,12 @@ int main(int argc, char *argv[]) {
 			neigh_addr[1] = player_listen[i+1];
 		}
 		neigh_addr[2] = player_listen[i];
-//		for(int i =0; i < 3; i++) {
-//			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_addr+i);
-//			char ip4[INET_ADDRSTRLEN];
-//			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
-//			cout << ip4 << "" << sa.sin_port << endl;
-//		}
+		for(int j =0; j < 3; j++) {
+			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_addr+j);
+			char ip4[INET_ADDRSTRLEN];
+			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
+			cout << ip4 << "" << sa.sin_port << endl;
+		}
         // send neighbor information to client
 //		status = send(player_socketfd[i], neigh_addr , 3*sizeof(*(neigh_addr)), 0);
 //		if(status == -1 ){
@@ -240,7 +262,7 @@ int main(int argc, char *argv[]) {
 		//cout<< "now start select"<<endl;
 		for(int i =0; i <= fdmax; i++){
 			if(FD_ISSET(i, & read_fds)){
-				if((status = recv(i, &mypotato, sizeof(mypotato),0))!= sizeof(mypotato)){
+				if((status = recv(i, &mypotato, sizeof(potato),MSG_WAITALL))!= sizeof(potato)){
 					if(status==0) {
 						cout << "socket" << i << " hung up" << endl;
 					}
@@ -264,7 +286,7 @@ int main(int argc, char *argv[]) {
 				            cout<<", "<<mypotato.players_ID[i];
 				    }
 				    cout<<""<<endl;
-					cout << "I'm it!"<<endl;
+//					cout << "I'm it!"<<endl;
 					sendmsg((void*)end,player_socketfd,num_players,sizeof(end));
                     freeaddrinfo(host_info_list);
                     close(socket_fd);

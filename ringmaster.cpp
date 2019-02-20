@@ -158,12 +158,12 @@ int main(int argc, char *argv[]) {
 			neigh_addr[1] = player_listen[i+1];
 		}
 		neigh_addr[2] = player_listen[i];
-		for(int j =0; j < 3; j++) {
-			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_addr+j);
-			char ip4[INET_ADDRSTRLEN];
-			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
-			cout << ip4 << "" << sa.sin_port << endl;
-		}
+//		for(int j =0; j < 3; j++) {
+//			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_addr+j);
+//			char ip4[INET_ADDRSTRLEN];
+//			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
+//			cout << ip4 << "" << sa.sin_port << endl;
+//		}
         // send neighbor information to client
 //		status = send(player_socketfd[i], neigh_addr , 3*sizeof(*(neigh_addr)), 0);
 //		if(status == -1 ){

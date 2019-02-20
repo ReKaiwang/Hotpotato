@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   struct addrinfo host_info, listen_info; // hits
   struct addrinfo *host_info_list;
   struct addrinfo *listen_info_list;
- struct addrinfo *neigh_info_list;
+  struct addrinfo *neigh_info_list;
   struct sockaddr_in * neigh_inf= new struct sockaddr_in[3]; // store neighbor listen socket
   struct sockaddr_storage * neigh_add= new struct sockaddr_storage[2]; //
   const char *hostname = argv[1];
@@ -113,7 +113,6 @@ int main(int argc, char *argv[]) {
   status = bind(listen_fd, listen_info_list->ai_addr, listen_info_list->ai_addrlen);
   if (status == -1) {
         cerr << "Error: cannot bind socket" << endl;
-        //	 cerr << "  (" << hostname << "," << port << ")" << endl;
         return -1;
     }
 
@@ -121,21 +120,22 @@ int main(int argc, char *argv[]) {
     status = listen(listen_fd, 100);
     if (status == -1) {
         cerr << "Error: cannot listen on socket" << endl;
-        // 	cerr << "  (" << hostname << "," << port << ")" << endl;
         return -1;
-    } //if
+    }
+
     //get the listen socket address and port
     status  = getsockname(listen_fd,listen_addr,& listen_info_list->ai_addrlen);
     if(status == -1){
         cerr << "fail to get listen socket name" << endl;
         return EXIT_FAILURE;
     }
+    //change the to NBO
    ((struct sockaddr_in *) listen_addr)->sin_port = htons(((struct sockaddr_in *) listen_addr)->sin_port);
-    struct sockaddr_in sa = *(struct sockaddr_in *) listen_addr;
-    char ip4[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
-    cout <<inet_ntoa(sa.sin_addr)<<endl;
-    cout <<"original" <<ip4 << " " << sa.sin_port << endl;
+//    struct sockaddr_in sa = *(struct sockaddr_in *) listen_addr;
+//    char ip4[INET_ADDRSTRLEN];
+//    inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
+//    cout <<inet_ntoa(sa.sin_addr)<<endl;
+//    cout <<"original" <<ip4 << " " << sa.sin_port << endl;
 
 
     //conect with ringmster
@@ -153,12 +153,12 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-    for(int j =0; j < 3; j++) {
-			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_inf+j);
-			char ip4[INET_ADDRSTRLEN];
-			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
-			cout << ip4 << "" << sa.sin_port << endl;
-		}
+//    for(int j =0; j < 3; j++) {
+//			struct sockaddr_in sa = *(struct sockaddr_in *) (neigh_inf+j);
+//			char ip4[INET_ADDRSTRLEN];
+//			inet_ntop(AF_INET, &(sa.sin_addr), ip4, INET_ADDRSTRLEN);
+//			cout << ip4 << "" << sa.sin_port << endl;
+//		}
   //receive player number from ringmaster
   status = recv(socket_fd,playernum , sizeof(playernum), 0);
     if(status == -1){
@@ -255,6 +255,7 @@ int main(int argc, char *argv[]) {
                         {
                             freeaddrinfo(host_info_list);
                             freeaddrinfo(listen_info_list);
+                            freeaddrinfo(neigh_info_list);
                             close(socket_fd);
                             close(listen_fd);
                             for(int j=0; j < 2; j++){
